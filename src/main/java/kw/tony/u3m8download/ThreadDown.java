@@ -14,7 +14,7 @@ public class ThreadDown implements Runnable {
     @Override
     public void run() {
         for (String s : arrayList) {
-            downloadSegment(s,"tempts/");
+            downloadSegment(s,"../tempts/");
         }
         isSuccess = true;
     }
