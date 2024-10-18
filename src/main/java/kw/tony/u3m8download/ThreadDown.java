@@ -5,15 +5,15 @@ import java.net.URL;
 import java.util.ArrayList;
 
 public class ThreadDown implements Runnable {
-    private ArrayList<String> arrayList;
+    private ArrayList<String> taskLink;
     private boolean isSuccess;
-    public ThreadDown(ArrayList<String> arrayList){
-        this.arrayList = arrayList;
+    public ThreadDown(ArrayList<String> taskLink){
+        this.taskLink = taskLink;
     }
 
     @Override
     public void run() {
-        for (String s : arrayList) {
+        for (String s : taskLink) {
             downloadSegment(s,"../tempts/");
         }
         isSuccess = true;

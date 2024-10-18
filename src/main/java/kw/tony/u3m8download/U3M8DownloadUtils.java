@@ -7,10 +7,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-import java.io.BufferedInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -22,41 +19,52 @@ public class U3M8DownloadUtils {
     private static int threadNum = 4;
     private static ArrayList<ThreadDown> threadDowns;
     private static ArrayList<ArrayList<String>> arrayLists;
+    private U3m8Request request;
+
     public static void main(String[] args) throws IOException {
+        U3M8DownloadUtils utils = new U3M8DownloadUtils();
+        U3m8Request request1 = new U3m8Request();
         String m3u8Url = "https://vip.ffzy-video.com/20240930/3288_b98249b3/index.m3u8";
+        request1.setUrl(m3u8Url);
+        utils.down(request1);
+    }
+
+    public void down(U3m8Request request) throws IOException {
+        this.request = request;
+//        String m3u8Url = "https://vip.ffzy-video.com/20240930/3288_b98249b3/index.m3u8";
 //        String m3u8Url = "https://v11.tlkqc.com/wjv11/202409/03/7etU7gYbdX83/video/index.m3u8";
 //        String m3u8Url = "https://ukzy.ukubf3.com/20240904/5fNs9gj6/index.m3u8";
         ArrayList<String> allTsUrl = new ArrayList<>();
         threadDowns = new ArrayList<>();
         //找到所有的
-        downloadM3U8Recursive(m3u8Url,allTsUrl);
+        downloadM3U8Recursive(request.getUrl(),allTsUrl);
         System.out.println("all ts size :"+allTsUrl.size());
         if (allTsUrl.size()>0) {
             downLoadTs(allTsUrl);
             //检测是否下载完成
-            ArrayList<ThreadDown> removeDown = new ArrayList<>();
-            while (true) {
-                try {
-                    boolean flag = true;
-                    removeDown.clear();
-                    for (ThreadDown threadDown : threadDowns) {
-                        if (!threadDown.isSuccess()) {
-                            flag = false;
-                            break;
-                        } else {
-                            removeDown.add(threadDown);
-                        }
-                    }
-                    for (ThreadDown threadDown : removeDown) {
-                        threadDowns.remove(threadDown);
-                    }
-                    if (flag) break;
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            mergeSegments(allTsUrl, "outFile.mp4");
+//            ArrayList<ThreadDown> removeDown = new ArrayList<>();
+//            while (true) {
+//                try {
+//                    boolean flag = true;
+//                    removeDown.clear();
+//                    for (ThreadDown threadDown : threadDowns) {
+//                        if (!threadDown.isSuccess()) {
+//                            flag = false;
+//                            break;
+//                        } else {
+//                            removeDown.add(threadDown);
+//                        }
+//                    }
+//                    for (ThreadDown threadDown : removeDown) {
+//                        threadDowns.remove(threadDown);
+//                    }
+//                    if (flag) break;
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//            mergeSegments(allTsUrl, "outFile.mp4");
         }
     }
 
@@ -84,24 +92,50 @@ public class U3M8DownloadUtils {
         }
     }
 
-    public static void downLoadTs(ArrayList<String> allTsUrl){
+    public void downLoadTs(ArrayList<String> allTsUrl){
         //分任务
         if (allTsUrl.size() > threadNum) {
             for (int i1 = 0; i1 < threadNum; i1++) {
                 arrayLists = splitIntoEqualParts(allTsUrl, threadNum);
             }
+
+            //存储所有的链接，单个线程就下载这位即可
+            int downLoadUrlId = request.getUrl().hashCode();
+            for (int i1 = 0; i1 < arrayLists.size(); i1++) {
+                File file = new File(downLoadUrlId+"/"+i1);
+                file.getParentFile().mkdirs();
+                if (file.exists()) {
+                    file.delete();
+                }
+                try {
+                    file.createNewFile();
+                    BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file));
+                    ArrayList<String> strings = arrayLists.get(i1);
+                    for (String string : strings) {
+                        outputStream.write(string.getBytes());
+                        outputStream.write("\n".getBytes());
+                    }
+                    outputStream.flush();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+            }
             for (int i = 0; i < threadNum; i++) {
                 ThreadDown threadDown = new ThreadDown(arrayLists.get(i));
-                Thread thread = new Thread(threadDown);
                 threadDowns.add(threadDown);
-                thread.start();
             }
+
+
+//            for (ThreadDown threadDown : threadDowns) {
+//                new Thread(threadDown).start();
+//            }
         }else {
             //不分
-            ThreadDown threadDown = new ThreadDown(allTsUrl);
-            Thread thread = new Thread(threadDown);
-            threadDowns.add(threadDown);
-            thread.start();
+//            ThreadDown threadDown = new ThreadDown(allTsUrl);
+//            Thread thread = new Thread(threadDown);
+//            threadDowns.add(threadDown);
+//            thread.start();
         }
     }
 
